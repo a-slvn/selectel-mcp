@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "selectel-mcp"
+version = "0.1.0"
+description = "MCP server for the Selectel cloud (OpenStack compute, S3 object storage, billing)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "selivanov74tr" }]
+keywords = ["mcp", "selectel", "openstack", "s3", "cloud"]
+
+dependencies = [
+    "mcp>=1.2.0",
+    "openstacksdk>=3.0.0",
+    "boto3>=1.34.0",
+    "httpx>=0.27.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+selectel-mcp = "selectel_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/selectel_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
