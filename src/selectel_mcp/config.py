@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -45,7 +46,13 @@ class Settings:
 
 def load_settings() -> Settings:
     """Load settings from environment / .env. Raises if core OpenStack creds missing."""
+    # Prefer a .env found from the current working directory; fall back to the
+    # one at the project root next to this package so the server finds creds no
+    # matter which directory the MCP host launches it from. Real env vars win.
     load_dotenv()
+    project_env = Path(__file__).resolve().parents[2] / ".env"
+    if project_env.is_file():
+        load_dotenv(project_env, override=False)
     return Settings(
         account_id=_get("SEL_ACCOUNT_ID", required=True),
         username=_get("SEL_USERNAME", required=True),
