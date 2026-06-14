@@ -8,9 +8,22 @@ destroy_app can find and remove everything later.
 
 from __future__ import annotations
 
+import ipaddress
+
 from .compute import _server_summary
 
 APP_TAG = "mcp-app"
+
+
+def _public_ip(ips: list[str]) -> str | None:
+    """Pick the first non-private (public) IPv4 from a list of addresses."""
+    for addr in ips:
+        try:
+            if not ipaddress.ip_address(addr).is_private:
+                return addr
+        except ValueError:
+            continue
+    return None
 
 
 def _cloud_init(git_repo: str | None, run_cmd: str | None) -> str:
@@ -100,10 +113,11 @@ def register(mcp, clients) -> None:
             meta={"managed-by": "selectel-mcp", APP_TAG: name},
             wait=True, timeout=600,
         )
-        public_ip = getattr(server, "access_ipv4", None) or getattr(server, "public_v4", None)
+        summary = _server_summary(server)
+        public_ip = _public_ip(summary["ips"])
         return {
             "app": name,
-            "server": _server_summary(server),
+            "server": summary,
             "security_group": {"name": sg_name, "open_ports": ports},
             "public_ip": public_ip,
             "ssh": f"ssh -i .ssh/selectel_mcp root@{public_ip}" if public_ip else None,
