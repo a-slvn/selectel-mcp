@@ -8,15 +8,35 @@ account: OpenStack cloud servers, S3 object storage, and account billing.
 
 | Area | Tools |
 |------|-------|
+| **Deploy** (one-shot) | `deploy_docker_app`, `destroy_app` |
 | **Compute** (OpenStack) | `list_servers`, `get_server`, `list_flavors`, `list_images`, `create_server`, `server_action`, `delete_server` |
-| **Network** | `list_networks`, `list_subnets`, `list_floating_ips` |
-| **Volumes** | `list_volumes` |
+| **Keypairs** | `list_keypairs`, `import_keypair`, `delete_keypair` |
+| **Security groups** | `list_security_groups`, `create_security_group`, `add_security_group_rule`, `delete_security_group` |
+| **Network** | `list_networks`, `list_subnets`, `list_floating_ips`, `create_floating_ip`, `attach_floating_ip`, `release_floating_ip` |
+| **Volumes** | `list_volumes`, `create_volume`, `attach_volume`, `delete_volume` |
 | **Object storage** (S3) | `list_buckets`, `list_objects`, `create_bucket`, `upload_object`, `download_object`, `delete_object` |
 | **Billing** | `get_balance`, `get_balance_prediction` |
 | **Account** | `list_projects` |
 
-Destructive tools (`delete_server`, `delete_object`) require `confirm=True`; without it
-they return a dry-run preview so the agent can show you what *would* happen first.
+Paid tools (`create_server`, `deploy_docker_app`, `create_floating_ip`) and destructive
+tools (`delete_*`, `destroy_app`, `release_floating_ip`) are gated: the destructive ones
+require `confirm=True` and otherwise return a dry-run preview, so the agent can show you
+what *would* happen first.
+
+### Deploy an app in one call
+
+```
+deploy_docker_app(
+  name="myapp",
+  image="Ubuntu 22.04",
+  flavor="SL1.1-1024",
+  git_repo="https://github.com/you/myapp",   # cloned to /opt/app, `docker compose up -d`
+  ports=[22, 80, 443],
+  confirm=True,                               # paid: provisions a server + public IP
+)
+# → creates a security group, a cloud-init server that installs Docker and runs your
+#   repo, and a floating IP. destroy_app("myapp") removes it all later.
+```
 
 ## How auth maps to Selectel
 

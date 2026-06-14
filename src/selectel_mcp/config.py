@@ -28,6 +28,7 @@ class Settings:
     project_id: str | None
     region: str
     auth_url: str
+    keypair_name: str
 
     # Account / billing REST API
     api_base: str
@@ -60,6 +61,7 @@ def load_settings() -> Settings:
         project_id=_get("SEL_PROJECT_ID") or None,
         region=_get("SEL_REGION", "ru-2"),
         auth_url=_get("SEL_AUTH_URL", "https://cloud.api.selcloud.ru/identity/v3"),
+        keypair_name=_get("SEL_KEYPAIR", "selectel-mcp"),
         api_base=_get("SEL_API_BASE", "https://api.selectel.ru").rstrip("/"),
         static_token=_get("SEL_STATIC_TOKEN") or None,
         s3_access_key=_get("SEL_S3_ACCESS_KEY") or None,

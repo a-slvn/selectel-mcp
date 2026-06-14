@@ -82,13 +82,18 @@ def register(mcp, clients) -> None:
         network: str,
         volume_size_gb: int = 20,
         key_name: str | None = None,
+        security_groups: list[str] | None = None,
+        user_data: str | None = None,
+        auto_ip: bool = False,
         region: str | None = None,
         project_id: str | None = None,
     ) -> dict:
         """Create a cloud server (boots from a new network volume).
 
-        image/flavor/network accept either a name or an id. Returns the created
-        server summary. The server is provisioned asynchronously (does not wait).
+        image/flavor/network accept either a name or an id. `security_groups` is a
+        list of security-group names. `user_data` is a cloud-init script run on first
+        boot. `auto_ip=True` allocates+attaches a floating IP (paid). Provisioning is
+        asynchronous (does not wait). Returns the created server summary.
         """
         conn = clients.openstack(region=region, project_id=project_id)
         server = conn.create_server(
@@ -96,7 +101,10 @@ def register(mcp, clients) -> None:
             image=image,
             flavor=flavor,
             network=[network],
-            key_name=key_name,
+            key_name=key_name or clients.settings.keypair_name,
+            security_groups=security_groups,
+            userdata=user_data,
+            auto_ip=auto_ip,
             boot_from_volume=True,
             volume_size=volume_size_gb,
             terminate_volume=True,
