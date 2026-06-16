@@ -1,5 +1,7 @@
 # selectel-mcp
 
+[![CI](https://github.com/a-slvn/selectel-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/a-slvn/selectel-mcp/actions/workflows/ci.yml)
+
 An [MCP](https://modelcontextprotocol.io) server that gives an AI agent (Claude Code,
 Claude Desktop, etc.) controlled access to a [Selectel](https://selectel.ru) cloud
 account: OpenStack cloud servers, S3 object storage, and account billing.
