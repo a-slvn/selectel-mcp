@@ -5,13 +5,17 @@ from __future__ import annotations
 from typing import Any
 
 
-def _server_summary(s: Any) -> dict:
-    d = s.to_dict() if hasattr(s, "to_dict") else dict(s)
+def _coerce(s: Any) -> dict:
+    return s.to_dict() if hasattr(s, "to_dict") else dict(s)
+
+
+def _summary(d: dict) -> dict:
     flavor = d.get("flavor") or {}
     addresses = d.get("addresses") or {}
     ips = [
         a.get("addr")
         for net in addresses.values()
+        if isinstance(net, list)
         for a in net
         if isinstance(a, dict) and a.get("addr")
     ]
@@ -28,6 +32,38 @@ def _server_summary(s: Any) -> dict:
     }
 
 
+def _server_summary(s: Any) -> dict:
+    """Compact, agent-friendly view of a server."""
+    return _summary(_coerce(s))
+
+
+def _server_detail(s: Any) -> dict:
+    """Summary plus the extra fields worth seeing for a single server, without
+    dumping the raw API object (which can be large and may carry base64 user_data)."""
+    d = _coerce(s)
+    image = d.get("image")
+    out = _summary(d)
+    out.update(
+        {
+            "image": image.get("id") if isinstance(image, dict) else image,
+            "key_name": d.get("key_name"),
+            "security_groups": [
+                g.get("name") for g in (d.get("security_groups") or []) if isinstance(g, dict)
+            ],
+            "availability_zone": d.get("availability_zone"),
+            "metadata": d.get("metadata") or {},
+            "volumes": [
+                v.get("id")
+                for v in (d.get("attached_volumes") or d.get("volumes") or [])
+                if isinstance(v, dict)
+            ],
+            "addresses": d.get("addresses") or {},
+            "updated_at": d.get("updated_at"),
+        }
+    )
+    return out
+
+
 def register(mcp, clients) -> None:
     @mcp.tool()
     def list_servers(region: str | None = None, project_id: str | None = None) -> list[dict]:
@@ -39,9 +75,9 @@ def register(mcp, clients) -> None:
     def get_server(
         server_id: str, region: str | None = None, project_id: str | None = None
     ) -> dict:
-        """Get full details for one cloud server by id."""
+        """Get details for one cloud server by id (curated, not the raw API object)."""
         conn = clients.openstack(region=region, project_id=project_id)
-        return conn.compute.get_server(server_id).to_dict()
+        return _server_detail(conn.compute.get_server(server_id))
 
     @mcp.tool()
     def list_flavors(region: str | None = None, project_id: str | None = None) -> list[dict]:

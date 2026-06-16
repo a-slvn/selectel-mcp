@@ -9,6 +9,8 @@ destroy_app can find and remove everything later.
 from __future__ import annotations
 
 import ipaddress
+import json
+import shlex
 
 from .compute import _server_summary
 
@@ -27,22 +29,28 @@ def _public_ip(ips: list[str]) -> str | None:
 
 
 def _cloud_init(git_repo: str | None, run_cmd: str | None) -> str:
-    lines = [
-        "#cloud-config",
-        "package_update: true",
-        "packages:",
-        "  - git",
-        "runcmd:",
-        "  - curl -fsSL https://get.docker.com | sh",
-        "  - systemctl enable --now docker",
+    """Render a #cloud-config document.
+
+    The body is emitted as JSON — JSON is valid YAML, so cloud-init accepts it,
+    and json.dumps handles all escaping. That avoids hand-built YAML that a stray
+    ``:`` , quote, tab or newline in ``git_repo`` / ``run_cmd`` could corrupt. The
+    ``bash`` wrappers use runcmd's list form so the script is passed as a single
+    execve argument and nothing needs re-quoting at the YAML or outer-shell layer.
+    """
+    runcmd = [
+        "curl -fsSL https://get.docker.com | sh",
+        "systemctl enable --now docker",
     ]
     if git_repo:
-        lines.append(f"  - git clone {git_repo} /opt/app")
+        runcmd.append(f"git clone {shlex.quote(git_repo)} /opt/app")
     if run_cmd:
-        lines.append(f"  - bash -lc 'cd /opt/app 2>/dev/null || true; {run_cmd}'")
+        runcmd.append(["bash", "-lc", f"cd /opt/app 2>/dev/null || true; {run_cmd}"])
     elif git_repo:
-        lines.append("  - bash -lc 'cd /opt/app && (docker compose up -d || docker-compose up -d)'")
-    return "\n".join(lines) + "\n"
+        runcmd.append(
+            ["bash", "-lc", "cd /opt/app && (docker compose up -d || docker-compose up -d)"]
+        )
+    doc = {"package_update": True, "packages": ["git"], "runcmd": runcmd}
+    return "#cloud-config\n" + json.dumps(doc, indent=2) + "\n"
 
 
 def _pick_network(conn, network: str | None):
@@ -115,12 +123,18 @@ def register(mcp, clients) -> None:
         )
         summary = _server_summary(server)
         public_ip = _public_ip(summary["ips"])
+        keypair = clients.settings.keypair_name
         return {
             "app": name,
             "server": summary,
             "security_group": {"name": sg_name, "open_ports": ports},
             "public_ip": public_ip,
-            "ssh": f"ssh -i .ssh/selectel_mcp root@{public_ip}" if public_ip else None,
+            "ssh": f"ssh -i <private-key> root@{public_ip}" if public_ip else None,
+            "ssh_note": (
+                f"Connect with the private key for keypair '{keypair}'."
+                if public_ip
+                else None
+            ),
             "note": "Server is ACTIVE; Docker install + app start finish in the "
                     "background (~1-3 min). Check via SSH or the exposed port.",
         }

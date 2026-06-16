@@ -4,6 +4,11 @@ An [MCP](https://modelcontextprotocol.io) server that gives an AI agent (Claude 
 Claude Desktop, etc.) controlled access to a [Selectel](https://selectel.ru) cloud
 account: OpenStack cloud servers, S3 object storage, and account billing.
 
+> **Unofficial.** Community project — not affiliated with, endorsed by, or supported
+> by Selectel. It talks to the public Selectel/OpenStack APIs with credentials you
+> provide. Use at your own risk; you are responsible for any resources it creates and
+> any charges they incur.
+
 ## What it can do
 
 | Area | Tools |
@@ -105,10 +110,24 @@ For Claude Desktop, add to `claude_desktop_config.json`:
 The server reads credentials from `.env` in its working directory (or from real
 environment variables).
 
+## Development
+
+```bash
+pip install -e ".[dev]"   # installs ruff + pytest
+ruff check .
+pytest
+```
+
+The pure helpers (cloud-init rendering, server summarization, public-IP picking) are
+unit-tested without touching the network. CI runs lint + tests on every push.
+
 ## Safety notes
 
 - The service user is the blast radius — scope its IAM roles to exactly what you want
   the agent to touch. Read-only roles make the whole server read-only.
+- `deploy_docker_app` opens the requested ports to `0.0.0.0/0` — the whole internet —
+  **including SSH (22)** by default. Pass a narrower `ports` list, or tighten the
+  security group afterward, for anything beyond a quick throwaway test.
 - `.env` holds secrets and is git-ignored. Don't commit it.
 - For infrastructure *changes*, consider managing them with Terraform (provider
   `selectel/selectel`) so every change goes through a reviewable `plan` → `apply`.

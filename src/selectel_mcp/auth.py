@@ -66,28 +66,14 @@ class SelectelRest:
             self._iam_token, self._iam_expires = self._mint_account_iam_token()
         return self._iam_token
 
-    def _auth_headers(self, force_static: bool = False) -> dict[str, str]:
+    def _auth_headers(self) -> dict[str, str]:
         if self._s.static_token:
             return {"X-Token": self._s.static_token}
-        if force_static:
-            raise RuntimeError(
-                "This endpoint requires a static token. Set SEL_STATIC_TOKEN "
-                "(control panel → Profile → Access → API keys)."
-            )
         return {"X-Auth-Token": self._account_iam_token()}
 
     # -- requests -------------------------------------------------------------
-    def get(self, path: str, *, force_static: bool = False, **kwargs) -> httpx.Response:
-        resp = self._client.get(path, headers=self._auth_headers(force_static), **kwargs)
-        resp.raise_for_status()
-        return resp
-
-    def request(
-        self, method: str, path: str, *, force_static: bool = False, **kwargs
-    ) -> httpx.Response:
-        resp = self._client.request(
-            method, path, headers=self._auth_headers(force_static), **kwargs
-        )
+    def get(self, path: str, **kwargs) -> httpx.Response:
+        resp = self._client.get(path, headers=self._auth_headers(), **kwargs)
         resp.raise_for_status()
         return resp
 
